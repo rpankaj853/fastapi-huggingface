@@ -12,5 +12,4 @@ question_answer = pipeline(task="question-answering", model="deepset/roberta-bas
 
 def generate_qa(context: str,question: str) -> str:
     qa_response = question_answer(question=question, context=context)
-    print(qa_response)
     return qa_response["answer"]
