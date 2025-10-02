@@ -11,7 +11,7 @@ FastAPI backend integrated with Hugging Face models for AI-powered APIs
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/your-username/fastapi-huggingface.git
+    git clone https://github.com/rpankaj853/fastapi-huggingface.git
     cd fastapi-huggingface
     ```
 
