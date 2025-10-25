@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
-from services.text_generation_service import generate_text
-from services.qa_service import generate_qa
+from ..services.text_generation_service import generate_text
+from ..services.qa_service import generate_qa
 
 
 # Load .env variables
