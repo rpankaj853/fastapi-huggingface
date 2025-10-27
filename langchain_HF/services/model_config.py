@@ -11,7 +11,7 @@ hf_token = os.getenv("HF_TOKEN")
 # Text generation pipeline
 generator = pipeline(
         "text-generation",
-        model="openai-community/gpt2",
+        model="katanemo/Arch-Router-1.5B",
         max_new_tokens=256,
         temperature=0.7,
         do_sample=True,
