@@ -11,11 +11,13 @@ hf_token = os.getenv("HF_TOKEN")
 # Text generation pipeline
 generator = pipeline(
         "text-generation",
-        model="katanemo/Arch-Router-1.5B",
+        model="Qwen/Qwen2.5-3B-Instruct",
         max_new_tokens=256,
         temperature=0.7,
         do_sample=True,
-        token=hf_token
+        token=hf_token,
+        return_full_text=False,
+        trust_remote_code=True,
         
     )
 

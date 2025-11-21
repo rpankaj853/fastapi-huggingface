@@ -2,19 +2,23 @@
 from langchain.chains import LLMChain, SequentialChain
 from langchain.prompts import PromptTemplate
 
-from ..services.model_config import load_text_generation_model
+from ..services.model_config import load_text_generation_model, load_summarization_model
 
 llm = load_text_generation_model()
+llm_summarizer = load_summarization_model()
 
-# Create a prompt template — LangChain replaces {content} dynamically
-summarize_prompt = PromptTemplate(
-    input_variables=["content"],  # expects an input key named "content"
-    template="Summarize this text in one short paragraph:\n\n{content}",
-)
+
+# # Create a prompt template — LangChain replaces {content} dynamically
+# summarize_prompt = PromptTemplate(
+#     input_variables=["content"],  # expects an input key named "content"
+#     template="Summarize this text in one short paragraph:\n\n{content}",
+# )
+
+summarize_prompt = PromptTemplate(input_variables=["content"], template="{content}")
 
 # output_key = name given to store the result from this chain
 summarize_chain = LLMChain(
-    llm=llm,
+    llm=llm_summarizer,
     prompt=summarize_prompt,
     output_key="summary",
 )
@@ -22,9 +26,15 @@ summarize_chain = LLMChain(
 # This will take the output of the previous step ("summary") as input
 
 title_prompt = PromptTemplate(
-    input_variables=["summary"],  # depends on the previous step
-    template="Generate a catchy title for this summary:\n\n{summary}",
+    input_variables=["summary"],
+    template=(
+        "Based on the summary below, generate ONLY a short, catchy title."
+        "Do NOT add explanations, do NOT repeat the summary, do NOT add multiple titles.\n\n"
+        "Summary:\n{summary}\n\n"
+        "Title:"
+    ),
 )
+
 
 title_chain = LLMChain(
     llm=llm,
