@@ -1,11 +1,12 @@
 import os
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
-from ..schema.model_schema import TextGenRequest, SummarizeRequest, LLMChainRequest
-from ..services.text_generation import generate_text
-from ..services.summarizer import summarize_text
-from ..services.simple_chain import generate_llm_chain_quote
-from ..services.sequential_chain import squential_chain
+from ...schema.model_schema import TextGenRequest, SummarizeRequest, LLMChainRequest
+from ...services.text_generation import generate_text
+from ...services.summarizer import summarize_text
+from ...services.simple_chain import generate_llm_chain_quote
+from ...services.sequential_chain import squential_chain
+
 
 # Load .env variables
 load_dotenv()
