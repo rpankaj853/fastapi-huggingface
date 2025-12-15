@@ -201,6 +201,12 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+
+# ChromaDB
+chroma.sqlite3
+chroma_db/
+**/chroma_db/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/

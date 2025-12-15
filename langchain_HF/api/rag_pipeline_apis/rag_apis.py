@@ -1,6 +1,10 @@
 import os
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
+from fastapi import Form, File, UploadFile
+from typing import Optional
+import tempfile
+from enum import Enum
 from ...schema.model_schema import AddOptions, QueryRequest, AskRequest
 from ...services.model_config import load_text_generation_model
 from ...rag_pipeline_services.loader_service import DocumentLoaderServices
@@ -9,6 +13,13 @@ from ...rag_pipeline_services.embeddings_service import EmbeddingsService
 from ...rag_pipeline_services.vectorstore_service import ChromaVectorStoreService
 from ...rag_pipeline_services.retriever_service import RetrieverService
 from ...rag_pipeline_services.generation_query_service import GenerationService
+
+
+class FileType(str, Enum):
+    pdf = "pdf"
+    docx = "docx"
+    url = "url"
+
 
 # Load .env variables
 load_dotenv()
@@ -215,3 +226,93 @@ def retrieve_chunks(req: QueryRequest):
 @router.post("/ask")
 def ask(req: AskRequest):
     return gen_service.generate_answer(req.prompt)
+
+
+@router.post("/ask-from-document")
+async def ask_from_document(
+    query: str = Form(...),
+    file_type: FileType = Form(...),
+    file: Optional[UploadFile] = File(None),
+    url: Optional[str] = Form(None),
+):
+    """
+    Load a document (PDF / DOCX / URL), run full RAG pipeline, and return answer.
+    User inputs:
+      - file_type: pdf | docx | url
+      - file OR url
+      - query
+    """
+
+    file_type = file_type.lower()
+
+    if file_type not in {"pdf", "docx", "url"}:
+        raise HTTPException(status_code=400, detail="Unsupported file_type")
+
+    if file_type in {"pdf", "docx"} and file is None:
+        raise HTTPException(status_code=400, detail="File is required for pdf/docx")
+
+    if file_type == "url" and not url:
+        raise HTTPException(status_code=400, detail="URL is required for file_type=url")
+
+    # ---------------------------------------------------
+    # 1. Save uploaded file temporarily (if needed)
+    # ---------------------------------------------------
+    temp_path = None
+    if file:
+        suffix = f".{file_type}"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(await file.read())
+            temp_path = tmp.name
+
+    try:
+        # ---------------------------------------------------
+        # 2. Load document(s)
+        # ---------------------------------------------------
+        docs = DocumentLoaderServices.load_any_document(
+            file_type=file_type,
+            file_path=temp_path,
+            url=url,
+        )
+
+        if not docs:
+            raise HTTPException(
+                status_code=400, detail="No content loaded from document"
+            )
+
+        # ---------------------------------------------------
+        # 3. Split documents
+        # ---------------------------------------------------
+        chunks = splitter_service.split_documents(docs)
+
+        if not chunks:
+            raise HTTPException(status_code=400, detail="No chunks created")
+
+        # ---------------------------------------------------
+        # 4. Embeddings + Vector Store
+        # ---------------------------------------------------
+        embedded_pairs = embedder.embed_documents(chunks)
+
+        chroma_store.add_embeddings(embedded_pairs)
+
+        # ---------------------------------------------------
+        # 5. Retriever
+        # ---------------------------------------------------
+        retriever = RetrieverService(embedder, chroma_store, k=5)
+
+        # ---------------------------------------------------
+        # 6. Generator (LLM)
+        # ---------------------------------------------------
+        llm = load_text_generation_model()
+        generator = GenerationService(retriever, llm)
+
+        # ---------------------------------------------------
+        # 7. Generate RAG answer
+        # ---------------------------------------------------
+        result = generator.generate_answer(query)
+
+        return result
+
+    finally:
+        # cleanup temp file
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
